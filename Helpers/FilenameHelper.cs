@@ -5,7 +5,7 @@ using System.Text;
 
 namespace TerraScraper.Utility;
 
-public static class FileTools
+public static class FilenameHelper
 {
     public static string ValidateFilename(string name, string replacement = " ")
     {

@@ -20,7 +20,7 @@ public class ScraperUI : UIState
     private void CreatePanel(UIPanel panel)
     {
         panel.Width.Set(70, 0);
-        panel.Height.Set((ScraperLoader.ScraperStack.Count * 60) + 10, 0);
+        panel.Height.Set((ScraperLoader.Scrapers.Count * 60) + 10, 0);
         panel.HAlign = 0.74f;
         panel.Top.Set(30, 0);
         panel.SetPadding(0);
@@ -31,12 +31,12 @@ public class ScraperUI : UIState
         Append(panel);
     }
 
-    private void CreateButtons(UIPanel panel)
+    private static void CreateButtons(UIPanel panel)
     {
-        foreach (Scraper scraper in ScraperLoader.ScraperStack)
+        foreach (ScraperBase scraper in ScraperLoader.Scrapers)
         {
             ScraperButton button = new ScraperButton(scraper);
-            button.Top.Set(ScraperLoader.ScraperStack.IndexOf(scraper) * 60 + 10, 0);
+            button.Top.Set(ScraperLoader.Scrapers.IndexOf(scraper) * 60 + 10, 0);
 
             panel.Append(button);
         }

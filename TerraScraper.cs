@@ -1,7 +1,7 @@
 using System;
 using System.IO;
 using Terraria.ModLoader;
-using TerraScraper.Components;
+using TerraScraper.Modules;
 
 namespace TerraScraper;
 

@@ -4,7 +4,7 @@ using Terraria;
 using Terraria.ModLoader;
 using TerraScraper.Scrapers;
 
-namespace TerraScraper.Components;
+namespace TerraScraper.Modules;
 
 public class CommandHandler : ModCommand
 {
@@ -20,7 +20,7 @@ public class CommandHandler : ModCommand
             return;
         }
 
-        Scraper scraper = ScraperLoader.ScraperStack.Find(scr => scr.Command == args[0].ToLower().Trim());
+        ScraperBase scraper = ScraperLoader.Scrapers.Find(scr => scr.Command == args[0].ToLower().Trim());
 
         if (scraper == null)
             ModHelp();
@@ -31,7 +31,7 @@ public class CommandHandler : ModCommand
     {
         StringBuilder help = new StringBuilder();
 
-        foreach (Scraper scraper in ScraperLoader.ScraperStack)
+        foreach (ScraperBase scraper in ScraperLoader.Scrapers)
         {
             help.AppendLine($"/{Command} {scraper.Command} — {scraper.Description}");
         }

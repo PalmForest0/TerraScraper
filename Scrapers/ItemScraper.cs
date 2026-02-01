@@ -9,14 +9,12 @@ using TerraScraper.Utility;
 
 namespace TerraScraper.Scrapers;
 
-public class ItemScraper : Scraper
+public sealed class ItemScraper : ScraperBase
 {
-    public ItemScraper()
-    {
-        SetPath("Items");
-        Command = "items";
-        Description = "Scrapes all the game's items for their textures and saves them as PNGs.";
-    }
+    public override string Folder { get; } = "Items";
+    public override string Command { get; } = "items";
+    public override string Description { get; } = "Scrapes all the game's items for their textures and saves them as PNGs.";
+    public override int UIButtonItemID { get; } = ItemID.Magiluminescence;
 
     public override void RunScrape()
     {
@@ -24,62 +22,67 @@ public class ItemScraper : Scraper
         {
             string itemName = Lang.GetItemNameValue(i);
 
-            if (string.IsNullOrEmpty(itemName))
+            if (string.IsNullOrWhiteSpace(itemName))
                 continue;
 
+            // If the item ID is beyond the base game's items, it is a mod item
             if (i >= ItemID.Count)
             {
-                Item item = new Item();
-                item.SetDefaults(i);
+                // Load the mod item to get access to its mod name
+                ModItem modItem = ItemLoader.GetItem(i);
 
-                if (item.ModItem != null)
-                {
-                    ScrapeItem(i, itemName, item.ModItem.Mod.Name);
-                    continue;
-                }
+                if (modItem is not null)
+                    SaveItemTexture(i, itemName, modItem.Mod.Name);
+
+                continue;
             }
 
-            ScrapeItem(i, itemName, "Vanilla");
+            SaveItemTexture(i, itemName, "Terraria");
         }
     }
 
     public override void PostScrape()
     {
-        Main.NewText($"All items have been succesfully saved to '{SavePath}'", Color.LimeGreen);
+        Main.NewText($"All items have been succesfully saved to '{FullSavePath}'", Color.LimeGreen);
         base.PostScrape();
     }
 
-    private void ScrapeItem(int id, string name, string folder)
+    private void SaveItemTexture(int id, string name, string folder)
     {
-        if (!TextureAssets.Item[id].IsLoaded)
-            Main.instance.LoadItem(id);
+        Directory.CreateDirectory(Path.Combine(FullSavePath, folder));
 
-        Texture2D texture = TextureAssets.Item[id].Value;
+        // Create the file path and stream
+        string path = Path.Combine(FullSavePath, folder, $"{FilenameHelper.ValidateFilename(name)}.png");
+        using FileStream stream = File.Create(path);
 
-        Rectangle sourceRect;
-        Color[] data;
-        var animation = Main.itemAnimations[id];
-        Texture2D firstFrame;
+        // Write the item texture to the stream
+        Texture2D texture = GetItemFirstFrame(id);
+        texture.SaveAsPng(stream, texture.Width, texture.Height);
+    }
 
-        if (animation != null)
+    private static Texture2D GetItemFirstFrame(int itemId)
+    {
+        if (!TextureAssets.Item[itemId].IsLoaded)
+            Main.instance.LoadItem(itemId);
+
+        Texture2D texture = TextureAssets.Item[itemId].Value;
+        var animation = Main.itemAnimations[itemId];
+
+        if (animation is not null)
         {
+            // Determine the rectangle of the first animation frame
             int frameHeight = texture.Height / animation.FrameCount;
-            sourceRect = new Rectangle(0, 0, texture.Width, frameHeight);
-            data = new Color[sourceRect.Width * sourceRect.Height];
+            Rectangle frameRect = new Rectangle(0, 0, texture.Width, frameHeight);
 
-            texture.GetData(0, sourceRect, data, 0, data.Length);
-            firstFrame = new Texture2D(Main.graphics.GraphicsDevice, sourceRect.Width, sourceRect.Height);
-            firstFrame.SetData(data);
+            // Extract the data of the first frame
+            Color[] data = new Color[frameRect.Width * frameRect.Height];
+            texture.GetData(0, frameRect, data, 0, data.Length);
+
+            // Create a new texture for the first frame
+            texture = new Texture2D(Main.graphics.GraphicsDevice, frameRect.Width, frameRect.Height);
+            texture.SetData(data);
         }
-        else firstFrame = texture;
 
-
-        Directory.CreateDirectory(Path.Combine(SavePath, folder));
-
-        string path = Path.Combine(SavePath, folder, $"{FileTools.ValidateFilename(name)}.png");
-        using (FileStream stream = File.Create(path))
-        {
-            firstFrame.SaveAsPng(stream, firstFrame.Width, firstFrame.Height);
-        }
+        return texture;
     }
 }
