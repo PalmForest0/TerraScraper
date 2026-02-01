@@ -1,14 +1,12 @@
-﻿using Terraria;
-using Terraria.GameContent.UI.Elements;
+﻿using Terraria.GameContent.UI.Elements;
 using Terraria.UI;
-using TerraScraper.Components;
 using TerraScraper.Scrapers;
 using Microsoft.Xna.Framework;
+using TerraScraper.Modules;
 
 namespace TerraScraper.UI;
 public class ScraperUI : UIState
 {
-
     public override void OnInitialize()
     {
         UIPanel panel = new UIPanel();
