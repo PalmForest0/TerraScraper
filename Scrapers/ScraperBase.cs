@@ -1,11 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
 using System;
+using System.Collections;
 using System.IO;
 using Terraria;
 using Terraria.Audio;
-using Terraria.Graphics.Effects;
 using Terraria.ID;
 using Terraria.ModLoader;
+using TerraScraper.Modules;
 
 namespace TerraScraper.Scrapers;
 
@@ -16,7 +17,9 @@ public abstract class ScraperBase
     public abstract string Description { get; }
     public abstract int UIButtonItemID { get; }
 
-    public string FullSavePath => Path.Combine(Path.Combine(TerraScraper.SavePath, Folder));
+    public string FullSavePath => Path.Combine(Path.Combine(ScraperLoader.Instance.SavePath, Folder));
+
+    private bool success = true;
 
     /// <summary>Runs the setup method before the main scrape process. To run full scrape please use <see cref="ScrapeAll(CommandCaller)"/></summary>
     public virtual void PreScrape()
@@ -29,9 +32,7 @@ public abstract class ScraperBase
     }
 
     /// <summary>Runs main scrape process. To run full scrape please use <see cref="ScrapeAll(CommandCaller)"/>.</summary>
-    public virtual void RunScrape()
-    {
-    }
+    public abstract IEnumerator RunScrape();
 
     /// <summary>Runs final cleanup after main scrape step. To run full scrape please use <see cref="ScrapeAll(CommandCaller)"/></summary>
     public virtual void PostScrape()
@@ -41,25 +42,26 @@ public abstract class ScraperBase
 
     public void ScrapeAll()
     {
-        // Try to run each step, if one fails, terminate
-        if (!TryRun(PreScrape, $"Encountered an error while running the preparation step of {GetType().Name}. The scrape step will not run."))
+        success = true;
+        PreScrape();
+
+        // If PreScrape failed, don't continue
+        if (!success)
             return;
-        if(!TryRun(RunScrape, $"Encountered an error while running the scrape step of {GetType().Name}. The post-scrape step will not run."))
-            return;
-        TryRun(PostScrape, $"Encountered an error while running the post-scrape step of {GetType().Name}.");
+
+        CoroutineHandler.StartNew(RunScrape(), () =>
+        {
+            // If RunScrape failed, don't continue
+            if (success)
+                PostScrape();
+        });
     }
 
-    private static bool TryRun(Action action, string errorMessage)
+    protected void FailCurrentStep(Exception ex, string context)
     {
-        try
-        {
-            action();
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Main.NewText(errorMessage, Color.OrangeRed);
-            return false;
-        }
+        success = false;
+        Main.NewText($"{context}:\n{ex.Message}", Color.OrangeRed);
     }
+
+    protected string GetPercentageString(int current, int total) => $"{(float)current / total * 100:0.00}%";
 }

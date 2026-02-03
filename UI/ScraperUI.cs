@@ -1,6 +1,5 @@
 ﻿using Terraria.GameContent.UI.Elements;
 using Terraria.UI;
-using TerraScraper.Scrapers;
 using Microsoft.Xna.Framework;
 using TerraScraper.Modules;
 
@@ -18,7 +17,7 @@ public class ScraperUI : UIState
     private void CreatePanel(UIPanel panel)
     {
         panel.Width.Set(70, 0);
-        panel.Height.Set((ScraperLoader.Scrapers.Count * 60) + 10, 0);
+        panel.Height.Set((ScraperLoader.Instance.Scrapers.Count * 60) + 10, 0);
         panel.HAlign = 0.74f;
         panel.Top.Set(30, 0);
         panel.SetPadding(0);
@@ -31,11 +30,12 @@ public class ScraperUI : UIState
 
     private static void CreateButtons(UIPanel panel)
     {
-        foreach (ScraperBase scraper in ScraperLoader.Scrapers)
+        for (int i = 0; i < ScraperLoader.Instance.Scrapers.Count; i++)
         {
-            ScraperButton button = new ScraperButton(scraper);
-            button.Top.Set(ScraperLoader.Scrapers.IndexOf(scraper) * 60 + 10, 0);
+            var scraper = ScraperLoader.Instance.Scrapers[i];
 
+            ScraperButton button = new ScraperButton(scraper);
+            button.Top.Set(i * 60 + 10, 0);
             panel.Append(button);
         }
     }

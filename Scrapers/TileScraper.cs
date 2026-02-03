@@ -1,11 +1,14 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections;
 using System.IO;
 using Terraria;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.Map;
 using Terraria.ModLoader;
+using TerraScraper.Modules;
 using TerraScraper.Utility;
 
 namespace TerraScraper.Scrapers;
@@ -17,21 +20,29 @@ public sealed class TileScraper : ScraperBase
     public override string Description { get; } = "Scrapes all the game's tiles for their textures and saves them as PNGs.";
     public override int UIButtonItemID { get; } = ItemID.DirtBlock;
 
-    public override void RunScrape()
+    private readonly int imagesToSavePerFrame = 4;
+
+    public override IEnumerator RunScrape()
     {
         for (int i = 0; i < TileLoader.TileCount; i++)
         {
             ModTile modTile = TileLoader.GetTile(i);
+            string tileName = modTile?.Name ?? GetTileDisplayName(i);
+            string modName = modTile?.Mod.Name ?? "Terraria";
 
-            // Save vanilla tile in a different way
-            if (modTile is null)
+            try
             {
-                string name = GetTileDisplayName(i);
-                SaveTileTexture(i, name, "Terraria");
-                continue;
+                SaveTileTexture(i, tileName, modName);
             }
-            
-            SaveTileTexture(i, modTile.Name, modTile.Mod.Name);
+            catch (Exception ex)
+            {
+                FailCurrentStep(ex, $"Failed to save tile texture for {tileName} ({i})");
+                yield break;
+            }
+
+            // Limit how many items are processed per frame to avoid freezing
+            if (i % imagesToSavePerFrame == 0)
+                yield return null;
         }
     }
 
@@ -73,10 +84,16 @@ public sealed class TileScraper : ScraperBase
             Main.instance.LoadTiles(tileId);
 
         // Create the file path and stream
-        string path = Path.Combine(FullSavePath, folder, $"{FilenameHelper.ValidateFilename(name)}.png");
-        using FileStream stream = File.Create(path);
+        string validated = FilenameHelper.ValidateFilename(name);
+        string filename = $"{tileId}{(string.IsNullOrWhiteSpace(validated) ? "" : $"_{validated}")}";
+        string path = Path.Combine(FullSavePath, folder, $"{filename}.png");
 
+        // Create a filestream and save the texture as a PNG
+        using FileStream stream = File.Create(path);
         Texture2D texture = TextureAssets.Tile[tileId].Value;
         texture.SaveAsPng(stream, texture.Width, texture.Height);
+
+        if (ScraperLoader.Instance.LogScrapeProgress)
+            Main.NewText($"[{GetPercentageString(tileId, TileLoader.TileCount - 1)}] Saved item texture: {name} ({tileId}) to {path}.", Color.LightGreen);
     }
 }

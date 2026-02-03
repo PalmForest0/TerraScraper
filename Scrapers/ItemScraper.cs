@@ -1,10 +1,13 @@
 ﻿using Microsoft.Xna.Framework;
 using Microsoft.Xna.Framework.Graphics;
+using System;
+using System.Collections;
 using System.IO;
 using Terraria;
 using Terraria.GameContent;
 using Terraria.ID;
 using Terraria.ModLoader;
+using TerraScraper.Modules;
 using TerraScraper.Utility;
 
 namespace TerraScraper.Scrapers;
@@ -16,7 +19,9 @@ public sealed class ItemScraper : ScraperBase
     public override string Description { get; } = "Scrapes all the game's items for their textures and saves them as PNGs.";
     public override int UIButtonItemID { get; } = ItemID.Magiluminescence;
 
-    public override void RunScrape()
+    private readonly int imagesToSavePerFrame = 10;
+
+    public override IEnumerator RunScrape()
     {
         for (int i = 0; i < ItemLoader.ItemCount; i++)
         {
@@ -37,7 +42,19 @@ public sealed class ItemScraper : ScraperBase
                 continue;
             }
 
-            SaveItemTexture(i, itemName, "Terraria");
+            try
+            {
+                SaveItemTexture(i, itemName, "Terraria");
+            }
+            catch(Exception ex)
+            {
+                FailCurrentStep(ex, $"Failed to save item texture for {itemName} ({i})");
+                yield break;
+            }
+
+            // Limit how many items are processed per frame to avoid freezing
+            if (i % imagesToSavePerFrame == 0)
+                yield return null;
         }
     }
 
@@ -52,12 +69,17 @@ public sealed class ItemScraper : ScraperBase
         Directory.CreateDirectory(Path.Combine(FullSavePath, folder));
 
         // Create the file path and stream
-        string path = Path.Combine(FullSavePath, folder, $"{FilenameHelper.ValidateFilename(name)}.png");
-        using FileStream stream = File.Create(path);
+        string validated = FilenameHelper.ValidateFilename(name);
+        string filename = $"{id}{(string.IsNullOrWhiteSpace(validated) ? "" : $"_{validated}")}";
+        string path = Path.Combine(FullSavePath, folder, $"{filename}.png");
 
-        // Write the item texture to the stream
+        // Create a filestream and save the texture as a PNG
+        using FileStream stream = File.Create(path);
         Texture2D texture = GetItemFirstFrame(id);
         texture.SaveAsPng(stream, texture.Width, texture.Height);
+
+        if(ScraperLoader.Instance.LogScrapeProgress)
+            Main.NewText($"[{GetPercentageString(id, ItemLoader.ItemCount - 1)}] Saved item texture: {name} ({id}) to {path}.", Color.LightGreen);
     }
 
     private static Texture2D GetItemFirstFrame(int itemId)

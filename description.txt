@@ -1,2 +1,2 @@
-Local utility mod for scraping Terraria's assets and other content.
+Utility mod for scraping Terraria's assets and other content.
 Use '/scrape help' in-game to see a list of all commands.

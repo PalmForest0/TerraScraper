@@ -16,22 +16,22 @@ public class CommandHandler : ModCommand
     {
         if (args.Length != 1)
         {
-            ModHelp();
+            SendHelpMessage();
             return;
         }
 
-        ScraperBase scraper = ScraperLoader.Scrapers.Find(scr => scr.Command == args[0].ToLower().Trim());
+        ScraperBase scraper = ScraperLoader.Instance.Scrapers.Find(scr => scr.Command == args[0].ToLower().Trim());
 
         if (scraper == null)
-            ModHelp();
+            SendHelpMessage();
         else scraper.ScrapeAll();
     }
 
-    private void ModHelp()
+    private void SendHelpMessage()
     {
         StringBuilder help = new StringBuilder();
 
-        foreach (ScraperBase scraper in ScraperLoader.Scrapers)
+        foreach (ScraperBase scraper in ScraperLoader.Instance.Scrapers)
         {
             help.AppendLine($"/{Command} {scraper.Command} — {scraper.Description}");
         }
